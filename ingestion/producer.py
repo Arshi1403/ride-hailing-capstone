@@ -29,6 +29,7 @@ def generate_ride_event(index):
 
     return {
         "ride_id": f"RIDE-{index:05d}",
+        "ingest_ts": datetime.now(timezone.utc).isoformat(),
         "driver_id": f"D{random.randint(1, 100):04d}",
         "rider_id": f"U{random.randint(1, 500):04d}",
         "pickup_zone": random.choice(zones),
