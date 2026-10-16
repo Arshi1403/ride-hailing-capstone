@@ -3,7 +3,6 @@ import os
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.email import EmailOperator
 from airflow.operators.empty import EmptyOperator
 from airflow.operators.python import BranchPythonOperator, PythonOperator
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
@@ -59,17 +58,31 @@ default_args = {
 }
 
 
-def notify_failure(context):
-    """Emails a failed task; alert_email comes from Secret Manager via the Airflow Variables backend."""
+def notify(subject, body):
+    """Emails alert_email (Secret Manager Variable); logs instead if no email backend is configured."""
+    import logging
+
     from airflow.models import Variable
     from airflow.utils.email import send_email
 
+    logging.getLogger(__name__).info("NOTIFY %s | %s", subject, body)
+    try:
+        send_email(Variable.get("alert_email"), subject, body)
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).warning("Email not sent (no email backend configured)")
+
+
+def notify_failure(context):
     ti = context["task_instance"]
-    send_email(
-        Variable.get("alert_email"),
-        f"[ride_hailing_daily] {ti.task_id} failed for {context['ds']}",
-        f"Log: {ti.log_url}",
-    )
+    notify(f"[ride_hailing_daily] {ti.task_id} failed for {context['ds']}", f"Log: {ti.log_url}")
+
+
+def send_alert(ds, ti, **_):
+    notify(f"[ride_hailing_daily] DQ FAILED for {ds}", f"Failures: {ti.xcom_pull(task_ids='dq_checks')['failures']}")
+
+
+def send_success(ds, ti, **_):
+    notify(f"[ride_hailing_daily] OK for {ds}", f"Metrics: {ti.xcom_pull(task_ids='dq_checks')['metrics']}")
 
 
 def bq_job(sql_file):
@@ -194,18 +207,8 @@ with DAG(
     )
     branch_on_dq = BranchPythonOperator(task_id="branch_on_dq", python_callable=choose_dq_path)
 
-    alert = EmailOperator(
-        task_id="alert",
-        to="{{ var.value.alert_email }}",
-        subject="[ride_hailing_daily] DQ FAILED for {{ ds }}",
-        html_content="Failures: {{ ti.xcom_pull(task_ids='dq_checks')['failures'] }}",
-    )
-    notify_success = EmailOperator(
-        task_id="notify_success",
-        to="{{ var.value.alert_email }}",
-        subject="[ride_hailing_daily] OK for {{ ds }}",
-        html_content="Metrics: {{ ti.xcom_pull(task_ids='dq_checks')['metrics'] }}",
-    )
+    alert = PythonOperator(task_id="alert", python_callable=send_alert)
+    notify_success = PythonOperator(task_id="notify_success", python_callable=send_success)
 
     (
         sense_historical_dump

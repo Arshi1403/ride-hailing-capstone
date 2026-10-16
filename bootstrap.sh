@@ -91,7 +91,7 @@ EOF
   gcloud compute networks subnets update default --region="$REGION" --enable-private-ip-google-access || \
     echo "WARNING: enable Private Google Access on the subnet used by Dataproc Serverless." >&2
   for role in roles/composer.worker roles/dataproc.editor roles/dataproc.worker roles/bigquery.admin \
-              roles/storage.admin roles/secretmanager.secretAccessor; do
+              roles/storage.admin roles/secretmanager.secretAccessor roles/iam.serviceAccountUser; do
     gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="serviceAccount:${SA}" --role="$role" --condition=None >/dev/null
   done
 
@@ -110,7 +110,8 @@ EOF
     for amount in 50 100; do
       gcloud billing budgets list --billing-account="$billing" --format='value(displayName)' | grep -qx "ride-hailing-$amount" || \
         gcloud billing budgets create --billing-account="$billing" --display-name="ride-hailing-$amount" \
-          --budget-amount="${amount}USD" --threshold-rule=percent=1.0
+          --budget-amount="${amount}USD" --threshold-rule=percent=1.0 || \
+        echo "WARNING: could not create the \$$amount budget; create it in Billing > Budgets & alerts." >&2
     done
   fi
 }

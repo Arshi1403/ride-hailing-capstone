@@ -73,7 +73,7 @@ Tests: `pip install pytest pyspark apache-airflow apache-airflow-providers-googl
 - 2 retries with exponential backoff, 4 h SLA and run timeout, `max_active_runs=1` (date-ordered runs for SCD2), `catchup=False` with on-demand backfill.
 - Idempotent: history load is `WRITE_TRUNCATE`, Spark overwrites only the `dt` partitions it produces, fact/dim are `MERGE`s.
 - DQ gate: rows for the run date, null ratio ≤ 1 %, no negative fares, no duplicate `ride_id`.
-- Secrets: Composer uses the Secret Manager backend; `alert_email` is the secret `airflow-variables-alert_email`. Email needs SMTP/SendGrid configured in Composer.
+- Secrets: Composer uses the Secret Manager backend; `alert_email` is the secret `airflow-variables-alert_email`. Notifications are emailed when SendGrid/SMTP is configured in Composer; otherwise they are written to the task log.
 
 ## Data model
 
