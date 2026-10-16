@@ -19,7 +19,6 @@ The platform supports:
 The main GCP services used are:
 
 - Pub/Sub
-- Dataflow
 - Google Cloud Storage
 - BigQuery
 - Dataproc Serverless
@@ -38,10 +37,7 @@ Python Producer
         v
 Pub/Sub
         |
-        v
-Dataflow
-        |
-        v
+        v   (BigQuery subscription)
 BigQuery Raw
 
 Historical CSV
@@ -115,9 +111,9 @@ Topic:
 
 `rides-events`
 
-### Dataflow
+### Pub/Sub BigQuery subscription
 
-Dataflow processes messages from Pub/Sub and loads them into BigQuery.
+A BigQuery subscription writes messages from Pub/Sub directly into BigQuery (Dataflow is not used because its job failed on every run). The JSON payload lands in the `data` column and `publish_time` is used as `ingest_ts`.
 
 Target table:
 
@@ -339,7 +335,6 @@ The project uses cost-control measures including:
 
 - Smallest practical Composer environment
 - Dataproc Serverless
-- Dataflow maximum of 2 workers
 - BigQuery maximum bytes billed of 10 GB
 - GCS lifecycle policy for raw data older than 14 days
 - Budget alerts at $50 and $100
@@ -352,7 +347,6 @@ The complete flow is:
 
 Producer
 → Pub/Sub
-→ Dataflow
 → BigQuery Raw
 → Dataproc Serverless
 → Curated Parquet / BigQuery
