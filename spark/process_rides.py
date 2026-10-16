@@ -138,7 +138,6 @@ def main():
     spark = (
         SparkSession.builder.appName("ride-hailing-curated")
         .config("spark.sql.session.timeZone", "UTC")
-        .config("spark.sql.sources.partitionOverwriteMode", "dynamic")
         .config("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
         .getOrCreate()
     )
@@ -157,8 +156,15 @@ def main():
     curated = derive(enrich(dedupe(clean(rides)), snapshot, zones))
 
     # Dynamic overwrite: only the dt partitions present in this run are replaced (idempotent).
-    curated.write.mode("overwrite").partitionBy("dt").parquet(f"{bucket}/curated/rides")
-    snapshot.write.mode("overwrite").partitionBy("dt").parquet(f"{bucket}/curated/dim_driver_snapshot")
+    # Set per write: the BigQuery connector rejects the lowercase session-level value.
+    (
+        curated.write.mode("overwrite").option("partitionOverwriteMode", "dynamic")
+        .partitionBy("dt").parquet(f"{bucket}/curated/rides")
+    )
+    (
+        snapshot.write.mode("overwrite").option("partitionOverwriteMode", "dynamic")
+        .partitionBy("dt").parquet(f"{bucket}/curated/dim_driver_snapshot")
+    )
     spark.stop()
 
 
