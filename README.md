@@ -36,6 +36,8 @@ Live messages go from Pub/Sub straight into BigQuery through a **BigQuery subscr
 | `bootstrap.sh` | Creates bucket, datasets, topic/subscription, data, secret, budgets, Composer |
 | `docs/` | Design doc and architecture diagram |
 
+Detailed demo handbook: `docs/demo_documentation.md`.
+
 ## Run
 
 Run in Cloud Shell (or any shell with `gcloud`/`bq` authenticated to the project):
@@ -77,6 +79,7 @@ Tests: `pip install pytest pyspark apache-airflow apache-airflow-providers-googl
 
 ## Data model
 
+- Visual overview: [docs/data_model.png](docs/data_model.png). The curated layer is fact-centric and star-schema-like, but not a snowflake schema: zone labels are denormalized in the fact table. Driver history is SCD Type 2 and joined by `driver_id`.
 - `curated_ds.fact_rides`: partition `pickup_date`, cluster `pickup_zone, driver_id`.
 - `curated_ds.dim_driver_scd2`: tracks `address` and `vehicle_type`; the sample snapshots change some drivers 3 days ago.
 - `mart_ds`: `v_daily_revenue`, `v_zone_demand_hourly`, `v_driver_leaderboard`, `zone_demand_forecast`, cost views `v_cost_daily_bytes`, `v_cost_top_queries`.
@@ -84,7 +87,12 @@ Tests: `pip install pytest pyspark apache-airflow apache-airflow-providers-googl
 
 ## Looker Studio
 
-Create a report on `mart_ds` (add the Looker Studio link and a cost-report screenshot here):
+Create a report on `mart_ds`:
+Link:https://datastudio.google.com/reporting/08647ee8-ee9f-4ac6-94ab-6ce345c095d5
+
+Screenshot:
+![alt text](image.png)
+
 
 - KPI tiles from `v_daily_revenue` (yesterday): `trips`, `revenue`, `avg_surge`, `active_drivers`.
 - Line chart: `revenue` by `pickup_date`, last 30 days.

@@ -211,6 +211,16 @@ This table maintains driver history using Slowly Changing Dimension Type 2.
 
 SCD Type 2 allows the system to preserve historical versions of driver information.
 
+### Data Model
+
+![Ride-hailing curated data model](data_model.png)
+
+The curated analytics layer is a **fact-centric, star-schema-like dimensional model**. `fact_rides` is the central ride-level fact table, and `dim_driver_scd2` stores driver attributes and their Type 2 history. The driver relationship is a logical join on `driver_id`; the leaderboard view uses only the current driver version (`is_current`).
+
+This is **not a snowflake schema**: descriptive zone names are stored directly in `fact_rides` rather than in separate normalized zone dimensions. It is also not a strict, fully keyed star schema, because the fact table does not store a surrogate key for a specific historical driver version. As a result, the diagram represents the current implementation, and historical rides are not explicitly tied to the exact driver-attribute version that was valid at ride time.
+
+The fact table is partitioned by `pickup_date` and clustered by `pickup_zone` and `driver_id`. Mart views aggregate the fact table for daily revenue and hourly zone demand; the driver leaderboard also joins the current driver dimension.
+
 ---
 
 ## 8. Mart Layer
